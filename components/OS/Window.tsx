@@ -97,51 +97,64 @@ const Window: React.FC<WindowProps> = ({
     left: windowState.isMaximized ? 0 : 0,
     position: 'absolute',
     transition: (isDragging || isResizing) ? 'none' : 'width 0.2s, height 0.2s, transform 0.1s',
-    opacity: isActive ? 1 : 0.96,
+    opacity: 1, // Always full opacity for visibility, use shadow/border for inactive cue
   };
 
-  // macOS Big Sur+ Deep Shadow
+  // macOS Big Sur+ Deep Shadow for Active, Shallower for Inactive
   const shadowClass = isActive 
-    ? 'shadow-[0_20px_50px_rgba(0,0,0,0.45)]' 
-    : 'shadow-[0_10px_30px_rgba(0,0,0,0.25)]';
+    ? 'shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-black/10' 
+    : 'shadow-[0_10px_30px_rgba(0,0,0,0.2)] ring-1 ring-black/5';
 
   return (
     <div
       ref={windowRef}
       style={style}
-      className={`flex flex-col rounded-xl overflow-hidden bg-white text-black border border-black/10 transition-all duration-200 animate-in zoom-in-95 fade-in ${
+      className={`flex flex-col rounded-xl overflow-hidden bg-white text-black transition-all duration-200 animate-in zoom-in-95 fade-in ${
         windowState.isMaximized ? 'rounded-none shadow-none' : shadowClass
       }`}
       onMouseDown={() => onFocus(windowState.id)}
     >
       {/* Title Bar */}
       <div
-        className={`h-11 flex items-center px-4 select-none cursor-default shrink-0 transition-colors relative ${isActive ? 'bg-[#F3F3F3] border-b border-[#DCDCDC]' : 'bg-[#F6F6F6] border-b border-[#E5E5E5] text-gray-400'}`}
+        className={`h-11 flex items-center px-4 select-none cursor-default shrink-0 transition-colors relative ${isActive ? 'bg-[#F3F3F3] border-b border-[#DCDCDC]' : 'bg-[#F6F6F6]/80 border-b border-[#E5E5E5] text-gray-400'}`}
         onMouseDown={handleMouseDown}
         onDoubleClick={() => onMaximize(windowState.id)}
       >
         {/* macOS Traffic Lights */}
-        <div className="window-controls flex gap-2 mr-4 z-10">
+        <div className="window-controls flex gap-2 mr-4 z-10 group">
           <button
             onClick={(e) => { e.stopPropagation(); onClose(windowState.id); }}
-            className={`w-3 h-3 rounded-full flex items-center justify-center group transition-all border ${isActive ? 'bg-[#FF5F57] border-[#E0443E]' : 'bg-[#FF5F57] border-[#E0443E] opacity-50'}`}
+            className={`w-3 h-3 rounded-full flex items-center justify-center transition-all border ${
+                isActive 
+                    ? 'bg-[#FF5F57] border-[#E0443E]' // Active Red
+                    : 'bg-[#DCDCDC] border-[#D1D1D1]' // Inactive Gray
+            }`}
           >
-            <X size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" />
+            {isActive && <X size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" />}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onMinimize(windowState.id); }}
-            className={`w-3 h-3 rounded-full flex items-center justify-center group transition-all border ${isActive ? 'bg-[#FEBC2E] border-[#D8A123]' : 'bg-[#FEBC2E] border-[#D8A123] opacity-50'}`}
+            className={`w-3 h-3 rounded-full flex items-center justify-center transition-all border ${
+                isActive 
+                    ? 'bg-[#FEBC2E] border-[#D8A123]' // Active Yellow
+                    : 'bg-[#DCDCDC] border-[#D1D1D1]' // Inactive Gray
+            }`}
           >
-            <Minus size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" />
+            {isActive && <Minus size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" />}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onMaximize(windowState.id); }}
-            className={`w-3 h-3 rounded-full flex items-center justify-center group transition-all border ${isActive ? 'bg-[#28C840] border-[#24AA35]' : 'bg-[#28C840] border-[#24AA35] opacity-50'}`}
+            className={`w-3 h-3 rounded-full flex items-center justify-center transition-all border ${
+                isActive 
+                    ? 'bg-[#28C840] border-[#24AA35]' // Active Green
+                    : 'bg-[#DCDCDC] border-[#D1D1D1]' // Inactive Gray
+            }`}
           >
-             {windowState.isMaximized ? 
-                <Scaling size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" /> :
-                <Maximize2 size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" />
-             }
+             {isActive && (
+                 windowState.isMaximized ? 
+                    <Scaling size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" /> :
+                    <Maximize2 size={6} strokeWidth={4} className="text-black/50 opacity-0 group-hover:opacity-100" />
+             )}
           </button>
         </div>
         
@@ -154,6 +167,8 @@ const Window: React.FC<WindowProps> = ({
       <div className="flex-1 overflow-hidden relative bg-white">
         {/* Overlay for resizing/dragging over iframes */}
         {(isDragging || isResizing) && <div className="absolute inset-0 z-50 bg-transparent" />}
+        {/* Inactive Window Dimming Layer */}
+        {!isActive && <div className="absolute inset-0 z-40 bg-white/5 pointer-events-none backdrop-grayscale-[10%]" />}
         {children}
       </div>
 

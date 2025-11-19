@@ -19,12 +19,16 @@ import Typora from './components/Apps/Typora';
 import Settings from './components/Apps/Settings';
 import AboutMac from './components/Apps/AboutMac';
 import ControlCenter from './components/Desktop/ControlCenter';
+import NotificationCenter from './components/OS/NotificationCenter';
 import BootScreen from './components/OS/BootScreen';
 import LoginScreen from './components/OS/LoginScreen';
 import ContextMenu from './components/OS/ContextMenu';
 import { FileSystemProvider, useFileSystem } from './contexts/FileSystemContext';
 import { Folder, FileText, Image as ImageIcon, File } from 'lucide-react';
 import { IconDefs } from './components/Icons';
+import { ThemeProvider } from './contexts/ThemeContext';
+
+const WALLPAPER_KEY = 'macos_wallpaper_v1';
 
 // Inner component that uses FileSystemContext
 const MacOS: React.FC = () => {
@@ -35,7 +39,17 @@ const MacOS: React.FC = () => {
   const [isLaunchpadOpen, setIsLaunchpadOpen] = useState(false);
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
-  const [wallpaper, setWallpaper] = useState(DEFAULT_WALLPAPER);
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  
+  // Persistent Wallpaper State
+  const [wallpaper, setWallpaper] = useState(() => {
+      return localStorage.getItem(WALLPAPER_KEY) || DEFAULT_WALLPAPER;
+  });
+
+  // Persist Wallpaper on change
+  useEffect(() => {
+      localStorage.setItem(WALLPAPER_KEY, wallpaper);
+  }, [wallpaper]);
   
   // Dragging State for Desktop Icons
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
@@ -58,7 +72,7 @@ const MacOS: React.FC = () => {
       };
       window.addEventListener('open-app', handleOpenAppEvent);
       return () => window.removeEventListener('open-app', handleOpenAppEvent);
-  }, [windows]); // Dep on windows to avoid stale closure if needed, though openApp uses setWindows functional update usually
+  }, [windows]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -78,6 +92,22 @@ const MacOS: React.FC = () => {
 
   const handleLogin = () => {
     setSystemState('DESKTOP');
+  };
+
+  // System State Actions
+  const handleRestart = () => {
+      setSystemState('BOOTING');
+      setWindows([]);
+  };
+
+  const handleSleep = () => {
+      setSystemState('LOGIN');
+  };
+  
+  const handleShutDown = () => {
+      // Create a fake shutdown state (black screen) by reusing booting but stopping at 0
+      // For now, just restart to boot
+      handleRestart(); 
   };
 
   // Window Management
@@ -247,7 +277,7 @@ const MacOS: React.FC = () => {
 
   return (
     <div 
-        className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none"
+        className="relative h-screen w-screen overflow-hidden bg-cover bg-center select-none transition-[background-image] duration-500"
         style={{ backgroundImage: `url(${wallpaper})` }}
         onContextMenu={handleContextMenu}
         onClick={() => {
@@ -272,7 +302,7 @@ const MacOS: React.FC = () => {
                          item.name.endsWith('.md') ? <FileText size={52} className="text-white drop-shadow-md" strokeWidth={1.5} /> :
                          <File size={52} className="text-white drop-shadow-md" strokeWidth={1.5} />
                         }
-                        <span className={`text-white text-[11px] font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] px-1.5 py-0.5 rounded-sm text-center break-all line-clamp-2 leading-tight ${draggedItemId === item.id ? 'bg-blue-600/80' : 'group-hover:bg-white/10'}`}>
+                        <span className="text-white text-[11px] font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] px-1.5 py-0.5 rounded-sm text-center break-all line-clamp-2 leading-tight group-hover:bg-white/10">
                             {item.name}
                         </span>
                     </div>
@@ -304,7 +334,12 @@ const MacOS: React.FC = () => {
         <div className="menubar-container relative z-[100]">
              <MenuBar 
                 toggleControlCenter={() => setIsControlCenterOpen(!isControlCenterOpen)} 
+                toggleNotificationCenter={() => setIsNotificationCenterOpen(!isNotificationCenterOpen)}
                 onAppleClick={() => openApp(AppID.ABOUT_MAC)}
+                onRestart={handleRestart}
+                onSleep={handleSleep}
+                onShutDown={handleShutDown}
+                onLogOut={handleSleep}
              />
         </div>
 
@@ -334,6 +369,11 @@ const MacOS: React.FC = () => {
             onClose={() => setIsControlCenterOpen(false)} 
         />
 
+        <NotificationCenter 
+            isOpen={isNotificationCenterOpen} 
+            onClose={() => setIsNotificationCenterOpen(false)} 
+        />
+
         <ContextMenu 
             isOpen={contextMenu.isOpen} 
             x={contextMenu.x} 
@@ -348,8 +388,10 @@ const MacOS: React.FC = () => {
 const App: React.FC = () => {
     return (
         <FileSystemProvider>
-            <IconDefs />
-            <MacOS />
+            <ThemeProvider>
+                <IconDefs />
+                <MacOS />
+            </ThemeProvider>
         </FileSystemProvider>
     );
 };

@@ -33,7 +33,7 @@ const Typora: React.FC<TyporaProps> = ({ fileId }) => {
   
   // Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // File Sync Logic: Only update internal state if fileId CHANGES, not when file content updates (avoid loops)
   useEffect(() => {

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Edit3, Trash2, Search } from 'lucide-react';
 
 interface Note {
@@ -8,14 +9,31 @@ interface Note {
     date: string;
 }
 
+const NOTES_STORAGE_KEY = 'macos_notes_data_v1';
+
+const DEFAULT_NOTES: Note[] = [
+    { id: 1, title: 'Grocery List', content: '- Milk\n- Eggs\n- Bread\n- Apples', date: 'Today' },
+    { id: 2, title: 'Project Ideas', content: '1. macOS Web Sim\n2. AI Assistant Integration\n3. Cloud File Sync', date: 'Yesterday' },
+    { id: 3, title: 'Meeting Notes', content: 'Discuss Q4 goals with the team. Focus on user retention.', date: 'Monday' }
+];
+
 const Notes: React.FC = () => {
-    const [notes, setNotes] = useState<Note[]>([
-        { id: 1, title: 'Grocery List', content: '- Milk\n- Eggs\n- Bread\n- Apples', date: 'Today' },
-        { id: 2, title: 'Project Ideas', content: '1. macOS Web Sim\n2. AI Assistant Integration\n3. Cloud File Sync', date: 'Yesterday' },
-        { id: 3, title: 'Meeting Notes', content: 'Discuss Q4 goals with the team. Focus on user retention.', date: 'Monday' }
-    ]);
-    const [selectedNoteId, setSelectedNoteId] = useState<number | null>(1);
+    const [notes, setNotes] = useState<Note[]>(() => {
+        try {
+            const saved = localStorage.getItem(NOTES_STORAGE_KEY);
+            return saved ? JSON.parse(saved) : DEFAULT_NOTES;
+        } catch (e) {
+            return DEFAULT_NOTES;
+        }
+    });
+    
+    const [selectedNoteId, setSelectedNoteId] = useState<number | null>(notes.length > 0 ? notes[0].id : null);
     const [search, setSearch] = useState('');
+
+    // Persistence Effect
+    useEffect(() => {
+        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
+    }, [notes]);
 
     const selectedNote = notes.find(n => n.id === selectedNoteId);
 
@@ -36,7 +54,8 @@ const Notes: React.FC = () => {
             content: '',
             date: 'Just Now'
         };
-        setNotes([newNote, ...notes]);
+        const updated = [newNote, ...notes];
+        setNotes(updated);
         setSelectedNoteId(newNote.id);
     };
 

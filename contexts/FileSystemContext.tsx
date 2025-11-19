@@ -5,6 +5,8 @@ import { FileSystemItem, FileType, FileSystemContextType } from '../types';
 
 const FileSystemContext = createContext<FileSystemContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'macos_fs_data_v1';
+
 const INITIAL_FS: Record<string, FileSystemItem> = {
   'root': { id: 'root', name: 'Macintosh HD', type: 'folder', children: ['desktop', 'documents', 'downloads'], parentId: null, createdAt: Date.now(), updatedAt: Date.now() },
   'desktop': { id: 'desktop', name: 'Desktop', type: 'folder', children: ['project_specs', 'welcome_txt', 'portfolio_folder'], parentId: 'root', createdAt: Date.now(), updatedAt: Date.now() },
@@ -17,7 +19,25 @@ const INITIAL_FS: Record<string, FileSystemItem> = {
 };
 
 export const FileSystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [fs, setFs] = useState<Record<string, FileSystemItem>>(INITIAL_FS);
+  // Initialize state from LocalStorage (The Backend) or fall back to Initial State
+  const [fs, setFs] = useState<Record<string, FileSystemItem>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : INITIAL_FS;
+    } catch (e) {
+      console.error("Failed to load FS from backend", e);
+      return INITIAL_FS;
+    }
+  });
+
+  // Persistence Effect: Save to LocalStorage on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(fs));
+    } catch (e) {
+      console.error("Failed to save FS to backend", e);
+    }
+  }, [fs]);
 
   const createItem = (name: string, type: FileType, parentId: string, content: string = '') => {
     const id = uuidv4();

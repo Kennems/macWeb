@@ -10,8 +10,10 @@ const dispatchOpenApp = (appId: AppID, fileId?: string) => {
 };
 
 const Terminal: React.FC = () => {
-  const { getChildren, getPath, createItem, deleteItem, getItem } = useFileSystem();
-  const [history, setHistory] = useState<any[]>(['Last login: ' + new Date().toLocaleString() + ' on ttys000']);
+  const { getChildren, getPath, createItem, deleteItem, getItem, fs } = useFileSystem();
+  const [history, setHistory] = useState<any[]>([]);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   const [input, setInput] = useState('');
   const [currentDirId, setCurrentDirId] = useState('root');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -20,6 +22,18 @@ const Terminal: React.FC = () => {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history]);
+
+  // Simulate Backend Connection Boot Sequence
+  useEffect(() => {
+      setHistory([
+          'Last login: ' + new Date().toLocaleString() + ' on ttys000',
+          <div key="boot" className="text-gray-500 text-xs mb-2 mt-1">
+              <div>Initializing File System Daemon... [OK]</div>
+              <div>Connecting to Local Persistence Layer... [CONNECTED]</div>
+              <div>Mounting /dev/disk1s1 to /... [MOUNTED]</div>
+          </div>
+      ]);
+  }, []);
 
   const getCurrentPathString = () => {
     const path = getPath(currentDirId);
@@ -33,11 +47,34 @@ const Terminal: React.FC = () => {
 
     switch (command) {
       case 'help':
-        return ['Available commands:', '  ls        List directory contents', '  cd [dir]  Change directory', '  pwd       Print working directory', '  mkdir [name] Create directory', '  touch [name] Create file', '  rm [name]    Remove item', '  cat [file]   Read file', '  open [app]   Open application', '  code [file]  Open VS Code', '  neofetch  Show system info', '  clear     Clear screen'];
+        return ['Available commands:', '  ls        List directory contents', '  cd [dir]  Change directory', '  pwd       Print working directory', '  mkdir [name] Create directory', '  touch [name] Create file', '  rm [name]    Remove item', '  cat [file]   Read file', '  open [app]   Open application', '  code [file]  Open VS Code', '  neofetch  Show system info', '  df        Show disk usage', '  reboot    Restart system', '  clear     Clear screen'];
       
       case 'clear':
         setHistory([]);
         return null;
+      
+      case 'reboot':
+        window.location.reload();
+        return ['Rebooting...'];
+
+      case 'date':
+        return [new Date().toString()];
+
+      case 'whoami':
+        return ['guest'];
+
+      case 'df': {
+          const usedBytes = JSON.stringify(fs).length;
+          const totalBytes = 5000000; // Fake 5MB quota
+          const percent = ((usedBytes / totalBytes) * 100).toFixed(1);
+          return [
+              <div key={Date.now()} className="font-mono whitespace-pre">
+                  {`Filesystem    512-blocks      Used Available Capacity iused      ifree %iused  Mounted on`}
+                  <br/>
+                  {`/dev/disk1s1   ${totalBytes}   ${usedBytes}   ${totalBytes - usedBytes}    ${percent}%   ${Object.keys(fs).length} 9223372036 0%   /`}
+              </div>
+          ];
+      }
 
       case 'open': {
           const appName = args[1]?.toLowerCase();
@@ -209,8 +246,34 @@ const Terminal: React.FC = () => {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (historyIndex < commandHistory.length - 1) {
+              const newIndex = historyIndex + 1;
+              setHistoryIndex(newIndex);
+              setInput(commandHistory[commandHistory.length - 1 - newIndex]);
+          }
+      } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (historyIndex > 0) {
+              const newIndex = historyIndex - 1;
+              setHistoryIndex(newIndex);
+              setInput(commandHistory[commandHistory.length - 1 - newIndex]);
+          } else if (historyIndex === 0) {
+              setHistoryIndex(-1);
+              setInput('');
+          }
+      }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!input.trim()) {
+        setInput('');
+        return;
+    }
+
     const newLines = handleCommand(input);
     const prompt = (
         <div key={Date.now() + '_prompt'} className="flex gap-2">
@@ -220,15 +283,16 @@ const Terminal: React.FC = () => {
         </div>
     );
     
-    if (commandIsClear(input)) {
+    setCommandHistory(prev => [...prev, input]);
+    setHistoryIndex(-1);
+
+    if (input.trim() === 'clear') {
        // handled in switch
     } else {
        setHistory(prev => [...prev, prompt, ...(newLines || [])]);
     }
     setInput('');
   };
-
-  const commandIsClear = (i: string) => i.trim() === 'clear';
 
   return (
     <div 
@@ -248,6 +312,7 @@ const Terminal: React.FC = () => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="flex-1 bg-transparent border-none outline-none text-[#d4d4d4] caret-white ml-1 font-mono"
             autoComplete="off"
             autoFocus

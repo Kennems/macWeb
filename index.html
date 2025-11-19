@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -9,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
+        darkMode: 'class', // Enable class-based dark mode
         theme: {
           extend: {
             fontFamily: {
@@ -31,12 +33,19 @@
               xs: '2px',
             },
             animation: {
-              'bounce-dock': 'bounce-dock 1s infinite',
+              'bounce-dock': 'bounce-dock 1.8s infinite cubic-bezier(0.28, 0.84, 0.42, 1)', // Physics based curve
             },
             keyframes: {
               'bounce-dock': {
                 '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-10px)' },
+                '10%': { transform: 'translateY(0)' }, // Delay
+                '30%': { transform: 'translateY(-24px)' }, // Peak Jump height (~40% of icon)
+                '50%': { transform: 'translateY(0)' },    // Impact
+                '57%': { transform: 'translateY(-7px)' }, // Rebound 1
+                '64%': { transform: 'translateY(0)' },    // Impact 2
+                '69%': { transform: 'translateY(-3px)' }, // Rebound 2
+                '74%': { transform: 'translateY(0)' },    // Impact 3
+                '100%': { transform: 'translateY(0)' }    // Rest
               }
             }
           }
