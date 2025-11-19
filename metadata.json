@@ -1,0 +1,5 @@
+{
+  "name": "macOS Web Experience",
+  "description": "A comprehensive macOS desktop simulation in the browser featuring window management, a functional dock, system utilities, and a Gemini-powered AI Assistant.",
+  "requestFramePermissions": []
+}
